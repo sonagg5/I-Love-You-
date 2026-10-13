@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinite Love ❤️</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #050505;
+    color: white;
+    min-height: 100vh;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+}
+
+h1 {
+    position: absolute;
+    top: 7%;
+    font-size: clamp(22px, 5vw, 38px);
+    color: #ff3155;
+    text-shadow: 0 0 20px #ff003c;
+    letter-spacing: 3px;
+}
+
+canvas {
+    width: min(95vw, 700px);
+    height: min(75vh, 700px);
+    display: block;
+}
+
+.message {
+    position: absolute;
+    bottom: 7%;
+    color: #ff8fa3;
+    font-size: 17px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 12px #ff1744;
+    animation: pulse 2s infinite;
+}
+
+button {
+    position: absolute;
+    bottom: 2%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border: 1px solid #ff3155;
+    color: #ff8fa3;
+    padding: 9px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: .5; }
+    50% { opacity: 1; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1>INFINITE LOVE</h1>
+    <canvas id="heart"></canvas>
+    <div class="message">I Love You</div>
+    <button id="restart">إعادة الرسم ↻</button>
+</div>
+
+<script>
+const canvas = document.getElementById("heart");
+const ctx = canvas.getContext("2d");
+const restart = document.getElementById("restart");
+
+let W, H, progress = 0;
+let lastTime = 0;
+let paused = false;
+
+function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = rect.width;
+    H = rect.height;
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+// معادلة رسم القلب
+function heartPoint(t, scale) {
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t)
+        - 5 * Math.cos(2 * t)
+        - 2 * Math.cos(3 * t)
+        - Math.cos(4 * t));
+
+    return {
+        x: W / 2 + x * scale,
+        y: H / 2 + y * scale
+    };
+}
+
+function drawHeart(scale, amount, alpha) {
+    const total = 900;
+    const steps = Math.floor(total * amount);
+
+    if (steps < 2) return;
+
+    ctx.beginPath();
+
+    for (let i = 0; i <= steps; i++) {
+        const t = (i / total) * Math.PI * 2;
+        const p = heartPoint(t, scale);
+
+        if (i === 0) {
+            ctx.moveTo(p.x, p.y);
+        } else {
+            ctx.lineTo(p.x, p.y);
+        }
+    }
+
+    ctx.strokeStyle = `rgba(255, 35, 75, ${alpha})`;
+    ctx.lineWidth = 1.7;
+    ctx.shadowColor = "#ff003c";
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+}
+
+function animate(time) {
+    requestAnimationFrame(animate);
+
+    if (paused) return;
+
+    if (!lastTime) lastTime = time;
+    const delta = Math.min(time - lastTime, 50);
+    lastTime = time;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // أكبر حجم ممكن للقلب
+    const maxScale = Math.min(W / 36, H / 34) * 0.94;
+
+    // قلوب متداخلة من الأصغر للأكبر
+    const heartCount = 22;
+    const speed = 0.00012;
+
+    progress += delta * speed;
+
+    if (progress > 1) progress = 1;
+
+    for (let i = 0; i < heartCount; i++) {
+        const scale = maxScale * (i + 1) / heartCount;
+
+        // القلب يظهر تدريجيًا حسب ترتيبه
+        const stage = i / heartCount;
+        const localProgress = Math.max(
+            0,
+            Math.min(1, (progress - stage * 0.72) / 0.28)
+        );
+
+        if (localProgress > 0) {
+            drawHeart(scale, localProgress, 0.35 + 0.65 * localProgress);
+        }
+    }
+
+    // نقطة مضيئة تتبع نهاية الخط أثناء الرسم
+    if (progress < 1) {
+        const currentIndex = Math.min(
+            heartCount - 1,
+            Math.floor(progress / 0.72 * heartCount)
+        );
+
+        const local = Math.min(
+            1,
+            (progress - currentIndex / heartCount * 0.72) / 0.28
+        );
+
+        if (local >= 0) {
+            const t = local * Math.PI * 2;
+            const p = heartPoint(
+                t,
+                maxScale * (currentIndex + 1) / heartCount
+            );
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff";
+            ctx.shadowColor = "#ff003c";
+            ctx.shadowBlur = 20;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+}
+
+restart.addEventListener("click", () => {
+    progress = 0;
+    lastTime = 0;
+});
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
